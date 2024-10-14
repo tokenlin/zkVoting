@@ -29,6 +29,30 @@ template CommitmentHasher() {
 
 }
 
+
+
+template Pedersen_HasherWithSn(){
+    signal input in[2]; 
+    signal output out;
+
+    component hasher = Pedersen(496);
+    component n2b0 = Num2Bits(256);
+    component n2b1 = Num2Bits(240);
+    n2b0.in <== in[0];
+    n2b1.in <== in[1];
+    for (var i = 0; i < 248; i++) {
+        hasher.in[i] <== n2b0.out[i];
+    }
+    for (var i = 248; i < 256; i++) {
+        hasher.in[i] <== n2b0.out[i];
+    }
+    for (var i = 0; i < 240; i++) {
+        hasher.in[i+256] <== n2b1.out[i];
+    }
+    out <== hasher.out[0];
+}
+
+
 template DualMux() {
     signal input in[2];
     signal input s;
@@ -79,7 +103,7 @@ template MerkleTreeChecker(levels) {
 template vote(levels) {
     // public
     signal input root;
-    signal input nullifierHash;
+    signal input nullifierHashWithSn;
     signal input ticketNum;
     signal input ifAgreed;  // 0 no; 1 yes
 
@@ -94,8 +118,14 @@ template vote(levels) {
     component hasher = CommitmentHasher();
     hasher.nullifier <== nullifier;
     hasher.secret <== secret;
+
+    // commitmentHasherWithSn
+    component hasherWithSn = Pedersen_HasherWithSn();
+    hasherWithSn.in[0] <== hasher.nullifierHash;  // 256 bit 
+    hasherWithSn.in[1] <== ticketNum;  // 240 bit
+
     // check
-    hasher.nullifierHash === nullifierHash;
+    hasherWithSn.out === nullifierHashWithSn;
 
     // MerkleTreeChecker
     component tree = MerkleTreeChecker(levels);
@@ -111,4 +141,4 @@ template vote(levels) {
 
 }
 
-component main {public [root, nullifierHash, ticketNum, ifAgreed]} = vote(20);
+component main {public [root, nullifierHashWithSn, ticketNum, ifAgreed]} = vote(20);
