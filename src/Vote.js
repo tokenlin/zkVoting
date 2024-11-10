@@ -8,9 +8,66 @@ import merkleTree from "fixed-merkle-tree";
 
 // import Buffer from 'buffer';
 
-import { Buffer } from 'buffer';
-// @ts-ignore
-window.Buffer = Buffer;
+// import { Buffer } from 'buffer';
+// // @ts-ignore
+// window.Buffer = Buffer;
+
+
+
+
+
+// bytes 0x010f20(input as string "0x010f20") => Uint8Array(3) [ 1, 15, 32 ]
+function byteStrToUint8Array(str){
+  str = str.replaceAll("0x", "");
+  let length = str.length;
+  if(length % 2 == 1) throw Error("Invalid string input1");
+  /*
+  0:48
+  9:57
+
+  A:65
+  F:70
+
+  a:97
+  f:102
+
+  */
+  for(let i=0; i<length; i++){
+    let num = str[i].charCodeAt();
+    if(num < 48 || num >57&&num<65 || num>70&&num<97 || num > 102) throw Error("Invalid string input2");
+  }
+
+  let uint8Array = new Uint8Array(length / 2);
+
+  let j=0;
+  for(let i=0; i<length; i=i+2){
+    let subStr = str.slice(i, i+2);
+    uint8Array[j++] = parseInt(subStr, 16);
+  }
+  return uint8Array;
+}
+
+
+// Uint8Array([ 1, 15, 32 ]) => bytes 0x010f20(output as string "0x010f20")
+var uint8ArrayToByteStr = function(uint8Array){
+  let str ="";
+  for(let i=0; i<uint8Array.length; i++){
+    let _hex;
+    if(uint8Array[i] <= 15){
+      _hex = "0" + uint8Array[i].toString(16);
+    }else{
+      _hex = uint8Array[i].toString(16);
+    }
+    str = str + _hex;
+    
+  }
+  return "0x" + str;
+}
+
+
+
+
+
 
 
 const MERKLE_TREE_HEIGHT = 20;
@@ -34,23 +91,33 @@ const perdersenHash = async (data) => {
 };
 
 const toHex = (number, length = 32) =>
-  "0x" +
-  (number instanceof Buffer
-    ? number.toString("hex")
-    : BigInt(number).toString(16)
-  ).padStart(length * 2, "0");
+  "0x" + BigInt(number).toString(16).padStart(length * 2, "0");
+  // "0x" +
+  // (number instanceof Buffer
+  //   ? number.toString("hex")
+  //   : BigInt(number).toString(16)
+  // ).padStart(length * 2, "0");
 
 // Register
 
 async function createRegister(nullifier, secret) {
   // geneate commitment and nullifierhash
   let register = { nullifier, secret };
-  register.preimage = Buffer.concat([
-    utils.leInt2Buff(register.nullifier, 31),
-    utils.leInt2Buff(register.secret, 31),
-  ]);
+
+
+  // register.preimage = Buffer.concat([
+  //   utils.leInt2Buff(register.nullifier, 31),
+  //   utils.leInt2Buff(register.secret, 31),
+  // ]);
+
+
+  let preimage = toHex(BigInt(uint8ArrayToByteStr(utils.leInt2Buff(register.nullifier, 31))), 31) 
+          + toHex(BigInt(uint8ArrayToByteStr(utils.leInt2Buff(register.secret, 31))), 31).replaceAll("0x", "");
+  let uint8Array = byteStrToUint8Array(preimage);
+  register.preimage = toHex(nullifier, 31) + toHex(secret, 31).replaceAll("0x", "");
+
   // console.log("register.preimage", register.preimage);
-  register.commitment = await perdersenHash(register.preimage);
+  register.commitment = await perdersenHash(uint8Array);
   register.nullifierHash = await perdersenHash(
     utils.leInt2Buff(register.nullifier, 31)
   );
@@ -67,11 +134,18 @@ async function createNullifierHashWithSn(nullifierHash, ticketNum) {
   
   let register = { nullifierHash, ticketNumInt};
 
-  register.preimage = Buffer.concat([
-    utils.leInt2Buff(register.nullifierHash, 32),  // nullifierHash: bytes32
-    utils.leInt2Buff(register.ticketNumInt, 30),  // 
-  ]);
-  register.commitment = await perdersenHash(register.preimage);
+  // register.preimage = Buffer.concat([
+  //   utils.leInt2Buff(register.nullifierHash, 32),  // nullifierHash: bytes32
+  //   utils.leInt2Buff(register.ticketNumInt, 30),  // 
+  // ]);
+
+  let preimage = toHex(BigInt(uint8ArrayToByteStr(utils.leInt2Buff(register.nullifierHash, 32))), 32) 
+          + toHex(BigInt(uint8ArrayToByteStr(utils.leInt2Buff(register.ticketNumInt, 30))), 30).replaceAll("0x", "");
+  let uint8Array = byteStrToUint8Array(preimage);
+  register.preimage = toHex(nullifierHash, 32) + toHex(ticketNumInt, 30).replaceAll("0x", "");
+  
+
+  register.commitment = await perdersenHash(uint8Array);
 
   return register;
 }
@@ -93,9 +167,13 @@ async function parseNote(noteString) {
     /vote-(?<chainId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g;
   const match = noteRegex.exec(noteString);
 
-  const buf = Buffer.from(match.groups.note, "hex");
-  const nullifier = utils.leBuff2int(buf.slice(0, 31));
-  const secret = utils.leBuff2int(buf.slice(31, 62));
+  // const buf = Buffer.from(match.groups.note, "hex");
+  // const nullifier = utils.leBuff2int(buf.slice(0, 31));
+  // const secret = utils.leBuff2int(buf.slice(31, 62));
+
+  const nullifier = BigInt("0x" + match.groups.note.slice(0,62));  
+  const secret = BigInt("0x" + match.groups.note.slice(62,124));   
+
   return await createRegister(nullifier, secret);
 }
 
