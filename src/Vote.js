@@ -3,7 +3,9 @@ import { utils } from "ffjavascript";
 import { buildBabyjub, buildPedersenHash } from "circomlibjs";
 import merkleTree from "fixed-merkle-tree";
 
-// import {Buffer} from 'buffer';
+import buffer_ from 'buffer/';
+const Buffer = buffer_.Buffer;
+
 
 const MERKLE_TREE_HEIGHT = 20;
 
@@ -41,6 +43,7 @@ async function createRegister(nullifier, secret) {
     utils.leInt2Buff(register.nullifier, 31),
     utils.leInt2Buff(register.secret, 31),
   ]);
+  // console.log("register.preimage", register.preimage);
   register.commitment = await perdersenHash(register.preimage);
   register.nullifierHash = await perdersenHash(
     utils.leInt2Buff(register.nullifier, 31)
