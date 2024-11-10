@@ -3,8 +3,14 @@ import { utils } from "ffjavascript";
 import { buildBabyjub, buildPedersenHash } from "circomlibjs";
 import merkleTree from "fixed-merkle-tree";
 
-import buffer_ from 'buffer/';
-const Buffer = buffer_.Buffer;
+// import buffer_ from 'buffer/';  // error
+// const Buffer = buffer_.Buffer;
+
+// import Buffer from 'buffer';
+
+import { Buffer } from 'buffer';
+// @ts-ignore
+window.Buffer = Buffer;
 
 
 const MERKLE_TREE_HEIGHT = 20;
