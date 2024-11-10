@@ -3,10 +3,12 @@ import { utils } from "ffjavascript";
 import { buildBabyjub, buildPedersenHash } from "circomlibjs";
 import merkleTree from "fixed-merkle-tree";
 
+// import {Buffer} from 'buffer';
+
 const MERKLE_TREE_HEIGHT = 20;
 
-const wasmFile = "circuits/build/vote_js/vote.wasm";
-const zkeyFile = "circuits/build/vote.zkey";
+const wasmFile = "./circuits/build/vote_js/vote.wasm";
+const zkeyFile = "./circuits/build/vote.zkey";
 
 
 function generateRandomHexBytes(length = 32) {
